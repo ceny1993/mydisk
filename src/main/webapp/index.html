@@ -24,6 +24,8 @@
     <div class="tab-pane fade in active" id="upload" style="width:400px;padding:30px">
 
         <input type="file" id="file" name="file"/>
+        <label style="color:red">只可上传图片和视频，视频支持mp4/ogg格式</label>
+        <br />
         <br />
         <div class="input-group">
             <span class="input-group-addon">文件重命名</span>
@@ -40,7 +42,7 @@
         <!--<input id="password" type="text" class="form-control" placeholder="可以为空(TODO)">-->
         <!--</div>-->
         <!--<br />-->
-        <input type="button" value="取消" onclick="location.reload()"/>&nbsp;&nbsp;&nbsp;&nbsp;
+        <input  type="button" value="取消" onclick="location.reload()"/>&nbsp;&nbsp;&nbsp;&nbsp;
         <input type="button" value="上传" onclick="upload()"/>
         <!--<a href="file/download">点击下载</a>-->
         <!--<img src="file/download" width="300px" height="300px">-->
@@ -79,10 +81,27 @@
 
 <script>
     var data = window.data;
+    var fileTypeList = [""];
     function upload(){
         var newName = $.trim(document.getElementById("newName").value);
         var comment = $.trim(document.getElementById("comment").value);
-        data.upload($('#file')[0].files[0],newName,comment);
+        var fileType = $('#file')[0].files[0]["type"];
+        var fileName = $('#file')[0].files[0]["name"];
+        var index = fileName.lastIndexOf(".");
+        if(index==-1){
+            alert("只可上传照片或者视频");
+            return;
+        }
+        var filePostfix = fileName.substr(index+1);
+        if(fileType.startsWith("image") || filePostfix=="mp4" || filePostfix=="ogg"){
+            data.upload($('#file')[0].files[0],newName,comment);
+        }
+        else{
+            alert("请检查文件格式是否正确");
+            return;
+        }
+        //TODO  regex ?*"<>/;
+        <!--;-->
     }
     function fileList(){
         $(".tmptr").remove();
@@ -141,11 +160,15 @@
             if(tmp[1].startsWith("image")){
                 g = "<td><button type='button' class='btn btn-primary' data-toggle='modal' data-target='.modal' onclick='fileChange(" +tmp[0]+ ",1)'>预览</button></td>"
             }
-            else if(tmp[1].startsWith("video")){
-                g = "<td><button type='button' class='btn btn-primary' data-toggle='modal' data-target='.modal' onclick='fileChange("+tmp[0]+",2)'>播放</button></td>"
-            }
             else{
-                g = "<td></td>"
+                var index = tmp[3].lastIndexOf(".");
+                var filePostfix = tmp[3].substr(index+1);
+                if(filePostfix=="mp4" || filePostfix=="ogg"){
+                    g = "<td><button type='button' class='btn btn-primary' data-toggle='modal' data-target='.modal' onclick='fileChange("+tmp[0]+",2)'>播放</button></td>"
+                }
+                else{
+                    g = "<td></td>"
+                }
             }
             var h = "<td><button type='button' class='btn btn-primary' onclick='fileDelete("+tmp[0]+")'>删除</button></td>"
             <!--var g = "<td><a href = 'file/download?id="+tmp[0]+"'>点击下载</a></td>";-->
@@ -154,11 +177,14 @@
         }
     }
 
+    $(function () { $('#theModal').on('hide.bs.modal', function () {
+        $("#theImg").removeAttr("src");
+        $("#theVideo").removeAttr("src");
+    })});
 </script>
 
-
 <!-- modal -->
-<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+<div class="modal fade" id="theModal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

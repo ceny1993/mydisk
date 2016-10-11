@@ -37,26 +37,31 @@ class FileController {
         if(att == null){
             render status:404, text:"Document not found"
         }else{
-            response.setContentType(att.contentType)
-            String filename =""
-            if(att.newName){
-                filename = new String((att.newName).getBytes("UTF-8"),"iso8859-1")
+            try {
+                response.setContentType(att.contentType)
+                String filename = ""
+                if (att.newName) {
+                    filename = new String((att.newName).getBytes("UTF-8"), "iso8859-1")
+                } else {
+                    filename = new String((att.oldName).getBytes("UTF-8"), "iso8859-1")
+                }
+                //String filename = new String((att.oldName).getBytes("UTF-8"),"iso8859-1")
+                response.setHeader("Content-Disposition", "Attachment;Filename=\"${filename}\"")
+                def fis = new ByteArrayInputStream(att.content)
+                def os = response.getOutputStream()
+//            byte[] buffer = new byte[4096]
+//            int len;
+//            while((len = fis.read(buffer))>0){
+//                os.write(buffer,0,len);
+//            }
+//            os.flush()
+//            os.close()
+                os << fis
+                fis.close()
             }
-            else{
-                filename = new String((att.oldName).getBytes("UTF-8"),"iso8859-1")
+            catch (Exception e){
+                println e.toString()
             }
-            //String filename = new String((att.oldName).getBytes("UTF-8"),"iso8859-1")
-            response.setHeader("Content-Disposition", "Attachment;Filename=\"${filename}\"")
-            def fis = new ByteArrayInputStream(att.content)
-            def os = response.getOutputStream()
-            byte[] buffer = new byte[4096]
-            int len;
-            while((len = fis.read(buffer))>0){
-                os.write(buffer,0,len);
-            }
-            os.flush()
-            os.close()
-            fis.close()
         }
     }
 
