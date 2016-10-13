@@ -1,95 +1,87 @@
 package app
 
-import basic.Attachment
+import basic.FileInfo
 import grails.converters.JSON
 
 /**
  * Created by ceny on 2016/10/9.
  */
 class FileController {
-    def upload(){
+
+    def uploadFile(){
         def file = request.getFile('file')
-        def newName = params["newName"]
-        def comment = params["comment"]
-        def oldName = file.originalFilename
-        if(newName){
-            newName = newName + oldName.substring(oldName.lastIndexOf("."))
-            println newName
+        def name = file.originalFilename
+        if(params["newName"]){
+            name = params["newName"]+name.substring(name.lastIndexOf("."))
         }
-        println file.originalFilename
-        println file.contentType
-        println file.getBytes().length
-        def att = new Attachment()
-        att.newName = newName
-        att.oldName = oldName
-        att.contentType = file.contentType
-        att.content = file.getBytes()
-        att.size = att.content.length
-        att.date = new Date()
-        att.comment = comment
-
-        att.save(flush:true)
-        render "ok"
-    }
-
-    def download(){
-        Attachment att = Attachment.get(params["id"])
-        if(att == null){
-            render status:404, text:"Document not found"
-        }else{
-            try {
-                response.setContentType(att.contentType)
-                String filename = ""
-                if (att.newName) {
-                    filename = new String((att.newName).getBytes("UTF-8"), "iso8859-1")
-                } else {
-                    filename = new String((att.oldName).getBytes("UTF-8"), "iso8859-1")
-                }
-                //String filename = new String((att.oldName).getBytes("UTF-8"),"iso8859-1")
-                response.setHeader("Content-Disposition", "Attachment;Filename=\"${filename}\"")
-                def fis = new ByteArrayInputStream(att.content)
-                def os = response.getOutputStream()
-//            byte[] buffer = new byte[4096]
-//            int len;
-//            while((len = fis.read(buffer))>0){
-//                os.write(buffer,0,len);
-//            }
-//            os.flush()
-//            os.close()
-                os << fis
-                fis.close()
-            }
-            catch (Exception e){
-                println e.toString()
-            }
+        File folder =new File("src/main/webapp/files");
+        if(!folder.exists()){// && !folder.isDirectory()
+            println "the folder do not exists"
+            folder.mkdir()
         }
+        //TODO check name
+
+        def fis = new ByteArrayInputStream(file.getBytes())
+        OutputStream out = new FileOutputStream(new File("src/main/webapp/files/"+name))
+        out<<fis
+        out.close()
+        fis.close()
+        def fileInfo = new FileInfo()
+        fileInfo.name = name
+        fileInfo.size = file.getBytes().length
+        fileInfo.contentType = file.contentType
+        fileInfo.comment = params["comment"]
+        fileInfo.date = new Date()
+        fileInfo.save(flush:true)
+        render fileInfo as JSON
     }
 
-    def list(){
-        def ans = Attachment.executeQuery("SELECT id,contentType,newName,oldName,size,date,comment FROM Attachment ORDER BY id DESC")
-        render ans as JSON
-    }
-
-    def delete(){
-        Attachment att = Attachment.get(params["id"])
-        if(att == null){
-            render status:404, text:"Document not found"
-        }else{
-            att.delete(flush:true)
-            render "done"
-        }
-    }
-
-    def search(){
+    def listFile(){
         def kw = params["keywords"]
-        def tmp = Attachment.executeQuery("SELECT id,contentType,newName,oldName,size,date,comment FROM Attachment ORDER BY id DESC")
-        def ans = []
-        tmp.each{
-            String str = it[2]+it[3]+it[6]
-            if(str.contains(kw)){
-                ans.add(it)
+        def tmp = FileInfo.findAll()
+        if(kw){
+            def ans = []
+            tmp.each {
+                String str = it["name"]+it["comment"]
+                if(str.contains(kw)) {
+                    ans.add(it)
+                }
             }
+            render ans.reverse() as JSON
         }
-        render ans as JSON
+        else{
+            render tmp.reverse() as JSON
+        }
+
     }
+
+    def deleteFile(int id){
+        FileInfo fileInfo = FileInfo.get(id)
+        if(fileInfo){
+            File file = new File("src/main/webapp/files/"+fileInfo["name"])
+            if(file.exists()){
+                file.delete()
+            }
+            fileInfo.delete(flush:true)
+            def ans = ["status":1]
+            render ans as JSON
+        }
+        else{
+            def ans = ["status":0]
+            render ans as JSON
+        }
+    }
+
+
+
 }
+
+
+//        new CustomersImportLog(
+//                fileId:id,
+//                fileName:attachment.name,
+//                failedFileId:failedId,
+//                successedNum:successedNum,
+//                failedNum:failedNum,
+//                importTime:new Date()
+//        ).save()

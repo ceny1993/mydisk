@@ -24,7 +24,7 @@
     <div class="tab-pane fade in active" id="upload" style="width:400px;padding:30px">
 
         <input type="file" id="file" name="file"/>
-        <label style="color:red">只可上传图片和视频，视频支持mp4/ogg格式</label>
+        <!--<label style="color:red">只可上传图片和视频，视频支持mp4/ogg格式</label>-->
         <br />
         <br />
         <div class="input-group">
@@ -51,7 +51,7 @@
         <div class="panel-body" style="width:630px">
             <div class="input-group">
                 <span class="input-group-addon">请输入关键字</span>
-                <input id="keywords" type="text" class="form-control" placeholder="按文件名或备注查找" style="width:400px;height:50px">
+                <input id="keywords" type="text" class="form-control" placeholder="按文件名/后缀/备注查找" style="width:400px;height:50px">
                 <button type="button" class="btn btn-default btn-lg" style="float:right" onclick="fileSearch()">
                     <span class="glyphicon glyphicon-search"></span>
                 </button>
@@ -65,9 +65,7 @@
             <!-- Table -->
             <table class="table" id="uphis">
                 <tr>
-                    <th>原始文件名</th>
-                    <th>新文件名</th>
-                    <th>文件类型</th>
+                    <th>文件名</th>
                     <th>文件大小(B)</th>
                     <th>上传时间</th>
                     <th>备注</th>
@@ -80,38 +78,50 @@
 </div>
 
 <script>
+    <!--$.get("file/myswf",function(data){-->
+        <!--var fso, f1, ts;-->
+        <!--fso = new ActiveXObject("Scripting.FileSystemObject");-->
+        <!--fso.CreateTextFile ("c:\\test1.txt");-->
+        <!--f1 = fso.GetFile("c:\\test1.txt");-->
+        <!--ts = f1.OpenAsTextStream(data, true);-->
+        <!--console.log(fso);-->
+        <!--console.log(f1);-->
+        <!--console.log(ts);-->
+    <!--});-->
+
+
     var data = window.data;
-    var fileTypeList = [""];
+    var fileTypeList = ["jpg","png","jpeg","mp4","ogg","swf","txt"];
     function upload(){
         var newName = $.trim(document.getElementById("newName").value);
         var comment = $.trim(document.getElementById("comment").value);
+        var fileSize = $('#file')[0].files[0]["size"];
+        if(fileSize>40*1000*1000){
+            alert("file is too large");
+            return ;
+        }
+
+
         var fileType = $('#file')[0].files[0]["type"];
         var fileName = $('#file')[0].files[0]["name"];
         var index = fileName.lastIndexOf(".");
-        if(index==-1){
-            alert("只可上传照片或者视频");
-            return;
+        if(index<0){
+            alert("file is illegal");
+            return ;
         }
         var filePostfix = fileName.substr(index+1);
-        if(fileType.startsWith("image") || filePostfix=="mp4" || filePostfix=="ogg"){
-            data.upload($('#file')[0].files[0],newName,comment);
-        }
-        else{
-            alert("请检查文件格式是否正确");
-            return;
-        }
         //TODO  regex ?*"<>/;
-        <!--;-->
+        data.upload($('#file')[0].files[0],newName,comment);
     }
     function fileList(){
         $(".tmptr").remove();
-        $.get("file/list",function(data){
+        $.get("file",function(data){
             processData(data);
         });
     }
 
     function fileDelete(id){
-        $.post("file/delete",{"id":id},function(data){
+        $.post("file/"+id,{},function(data){
             alert("删除成功");
             fileList();
         });
@@ -119,84 +129,102 @@
 
     function fileSearch(){
         var keywords = $.trim(document.getElementById("keywords").value);
-        if(keywords == ""){
-            alert("关键字不能为空");
-        }
-        else{
-            $(".tmptr").remove();
-            $.get("file/search?keywords="+keywords,function(data){
-                processData(data);
-            });
-        }
+        $(".tmptr").remove();
+        $.get("file?keywords="+keywords,function(data){
+            console.log(data);
+            processData(data);
+        });
     }
 
-    function fileChange(id,type){
-        if(type==1){
+    function fileChange(fileName,filePostfix){
+        if(filePostfix=="jpg" || filePostfix=="png" || filePostfix=="jpeg"){
             $("#theTitle").text("照片预览");
             $("#theVideo").hide();
-            $("#theImg").attr("src","file/download?id="+id);
+            $("#theDoc").hide();
+            $("#theImg").attr("src","files/"+fileName);
             $("#theImg").show();
-
         }
-
-        else if(type==2){
+        else if(filePostfix=="mp4" || filePostfix=="ogg"){
             $("#theTitle").text("视频播放");
             $("#theImg").hide();
-            $("#theVideo").attr("src","file/download?id="+id);
+            $("#theDoc").hide();
+            $("#theVideo").attr("src","files/"+fileName);
             $("#theVideo").show();
+        }
+        else if(filePostfix=="swf" ||filePostfix=="txt"){
+            $("#theTitle").text("文件预览");
+            $("#theImg").hide();
+            $("#theVideo").hide();
+            $("#theDoc").attr("src","files/"+fileName);
+            $("#theDoc").show();
+        }
+        else{
+            alert("file is illegal");
         }
     }
 
     function processData(data){
         for(var i=0;i<data.length;i++){
             var tmp = data[i];
-            var a = "<td>"+tmp[3]+"</td>"
-            var b = "<td>"+tmp[2]+"</td>";
-            var c = "<td>"+tmp[1]+"</td>";
-            var d = "<td>"+tmp[4]+"</td>";
-            var e = "<td>"+tmp[5]+"</td>";
-            var f = "<td>"+tmp[6]+"</td>";
-            var g;
-            if(tmp[1].startsWith("image")){
-                g = "<td><button type='button' class='btn btn-primary' data-toggle='modal' data-target='.modal' onclick='fileChange(" +tmp[0]+ ",1)'>预览</button></td>"
+            var a = "<td>"+tmp["name"]+"</td>"
+            var b = "<td>"+tmp["size"]+"</td>";
+            var c = "<td>"+tmp["date"]+"</td>";
+            var d = "<td>"+tmp["comment"]+"</td>";
+            var e ;
+            var index = tmp["name"].lastIndexOf(".");
+            if(index<0){
+                e = "<td></td>"
             }
             else{
-                var index = tmp[3].lastIndexOf(".");
-                var filePostfix = tmp[3].substr(index+1);
-                if(filePostfix=="mp4" || filePostfix=="ogg"){
-                    g = "<td><button type='button' class='btn btn-primary' data-toggle='modal' data-target='.modal' onclick='fileChange("+tmp[0]+",2)'>播放</button></td>"
+                var filePostfix = tmp["name"].substr(index+1).toLowerCase();
+                var j=0;
+                for(;j<fileTypeList.length;j++){
+                    if(fileTypeList[j] == filePostfix){
+                        break
+                    }
+                }
+                if(j==fileTypeList.length){
+                    e = "<td></td>"
                 }
                 else{
-                    g = "<td></td>"
+                    e = "<td><button type='button' class='btn btn-primary' data-toggle='modal' data-target='#theModal' onclick='fileChange(\"" +tmp["name"]+ "\",\""+filePostfix+"\")'>预览</button></td>"
                 }
+
             }
-            var h = "<td><button type='button' class='btn btn-primary' onclick='fileDelete("+tmp[0]+")'>删除</button></td>"
+            var f = "<td><button type='button' class='btn btn-primary' onclick='fileDelete("+tmp["id"]+")'>删除</button></td>"
             <!--var g = "<td><a href = 'file/download?id="+tmp[0]+"'>点击下载</a></td>";-->
             <!--var h = "<td><a href = '#' onclick='fileDelete("+tmp[0]+")'>点击删除</a></td>";-->
-            $("#uphis").append("<tr class = 'tmptr'>"+a+b+c+d+e+f+g+h+"</tr>");
+            $("#uphis").append("<tr class = 'tmptr'>"+a+b+c+d+e+f+"</tr>");
         }
     }
 
     $(function () { $('#theModal').on('hide.bs.modal', function () {
         $("#theImg").removeAttr("src");
         $("#theVideo").removeAttr("src");
+        $("#theDoc").removeAttr("src");
     })});
 </script>
 
 <!-- modal -->
-<div class="modal fade" id="theModal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade bs-example-modal-lg" id="theModal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
                 <h4 id="theTitle" class="modal-title"></h4>
             </div>
             <div class="modal-body text-center">
-                <img id="theImg" width="500px" height="auto">
-                <video id="theVideo" controls="controls" width="500px"/>
+                <img id="theImg" width="600px" height="auto">
+                <video id="theVideo" controls="controls" width="600px" height="auto"></video>
+                <embed id="theDoc" quality="high" width="700px" height="800px"/>
             </div>
         </div>
     </div>
 </div>
+
+
+
+
+
 </body>
 </html>

@@ -112,6 +112,7 @@ window.data = {
         formData.append('file', file);
         formData.append('newName', newName);
         formData.append('comment', comment);
+        console.log(formData);
         $.ajax({
              url:"file/upload",
              type: 'POST',
@@ -122,8 +123,9 @@ window.data = {
                  alert('上传失败');
              },
              success:function (msg) {
+                console.log(msg);
                  alert("上传成功");
-                 location.reload();
+//                 location.reload();
              }
          });
     }
